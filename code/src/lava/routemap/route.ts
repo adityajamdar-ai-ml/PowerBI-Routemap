@@ -255,7 +255,7 @@ class VisualRoute {
         const end = _fmt.glyph.end;
         if ('builtin' in end) {
             const shaper = shapes[end.builtin];
-            node.innerHTML = shaper.group;
+            setSvgContent(node, shaper.group);
             if (shaper.directional) {
                 rotate.att.transform(`rotate(${Math.atan2(pnt.uy, pnt.ux) * 180 / Math.PI + 90})`);
             }
@@ -273,8 +273,14 @@ class VisualRoute {
             }
             if (cache === custom) {
                 pnt.iconWidth = this._vertical() ? w : h;
-                var elem = `<image xlink:href="${custom}" height="${h}" width="${w}" transform="translate(${0 - w / 2},${0 - h / 2})"/>`;
-                node.innerHTML = elem;
+                while (node.firstChild) { node.removeChild(node.firstChild); }
+                const imgEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', custom);
+                imgEl.setAttribute('href', custom);
+                imgEl.setAttribute('height', String(h));
+                imgEl.setAttribute('width', String(w));
+                imgEl.setAttribute('transform', `translate(${0 - w / 2},${0 - h / 2})`);
+                node.appendChild(imgEl);
                 rotate.att.transform(this._rotate(pnt));
                 resize.att.transform(p => `scale(${size / p.iconWidth})`);
                 group.selectAll('*').each(function () { selex(this).datum(pnt); });
@@ -304,7 +310,7 @@ class VisualRoute {
         }
         else {
             const custom = end.custom || '';
-            node.innerHTML = custom;
+            setSvgContent(node, custom);
             let [cache, width, height] = VisualRoute.IMAGE_CACHE;
             if (cache === custom && width < 0) {
                 return;
@@ -373,4 +379,18 @@ class VisualRoute {
 
 function bad(r: number): boolean {
     return r === null || r === undefined || isNaN(r);
+}
+
+function setSvgContent(node: SVGGElement, svgString: string): void {
+    while (node.firstChild) {
+        node.removeChild(node.firstChild);
+    }
+    if (!svgString) { return; }
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(
+        `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${svgString}</svg>`,
+        'image/svg+xml'
+    );
+    const children = Array.from(doc.documentElement.childNodes);
+    children.forEach(child => node.appendChild(node.ownerDocument.importNode(child, true)));
 }
