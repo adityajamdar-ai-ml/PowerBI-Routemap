@@ -180,9 +180,10 @@ export class Controller {
     }
     const url = tileUrl(this._fmt.type);
     if (url) {
+      const subdomains = this._fmt.type === 'road' ? 'abc' : 'abcd';
       this._tileLayer = L.tileLayer(url, {
         attribution: tileAttribution(this._fmt.type),
-        subdomains: 'abcd',
+        subdomains,
         maxZoom: 19
       });
       this._tileLayer.addTo(this._map);
@@ -229,10 +230,10 @@ export class Controller {
 
   private _resize(): void {
     if (!this._map) { return; }
+    this._map.invalidateSize();
     const size = this._map.getSize();
     const w = size.x, h = size.y;
     this._svg.att.width('100%').att.height('100%');
-    this._canvas && this._canvas.att.size(w, h);
     this._svgroot.att.translate(w / 2, h / 2);
     for (const l of this._listener) {
       l.resize && l.resize(this);
@@ -256,8 +257,7 @@ export class Controller {
         zoomControl: false,
         attributionControl: true,
       });
-      // Move SVG/canvas on top of Leaflet's internal panes
-      this._div.appendChild(this._canvas.node());
+      // Place SVG overlay on top of Leaflet's tile panes (canvas not needed with SVG rendering)
       this._div.appendChild(this._svg.node());
       (this._svg.node() as any as HTMLElement).style.zIndex = '800';
       this._map.on('move', () => this._viewChange(false));
@@ -265,6 +265,8 @@ export class Controller {
       this._map.on('resize', () => this._resize());
       this._applyTileLayer();
       this._applyInteraction();
+      // invalidateSize ensures Leaflet recalculates tile layout after DOM is fully laid out
+      this._map.invalidateSize();
       this._resize();
       then(this._map);
       return this;
