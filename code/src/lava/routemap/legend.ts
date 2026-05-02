@@ -26,7 +26,8 @@ export class Legend {
     }
 
     private _resize(ctl: Controller) {
-        const width = ctl.map.getWidth(), height = ctl.map.getHeight();
+        const size = ctl.map.getSize();
+        const width = size.x, height = size.y;
         this._svg.att.size(width, this._height());
         const top = this._config.position === 'top' ? -1 : height - this._height() + 2;
         this._svg.sty.margin_top(top + 'px');

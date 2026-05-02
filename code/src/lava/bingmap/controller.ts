@@ -259,7 +259,7 @@ export class Controller {
       // Move SVG/canvas on top of Leaflet's internal panes
       this._div.appendChild(this._canvas.node());
       this._div.appendChild(this._svg.node());
-      selex(this._svg.node()).sty.z_index('800').sty.width('100%').sty.height('100%');
+      (this._svg.node() as any as HTMLElement).style.zIndex = '800';
       this._map.on('move', () => this._viewChange(false));
       this._map.on('moveend', () => this._viewChange(true));
       this._map.on('resize', () => this._resize());
