@@ -18,7 +18,7 @@ type Role = 'tooltip' | 'stamp' | 'latitude' | 'longitude' | 'route' | 'color' |
 export class Visual implements IVisual {
   private _target: HTMLElement;
   private _ctx = null as Context<Role, Format>;
-  private _persist = { map: new Persist<[Microsoft.Maps.Location, number]>('persist', 'centerzoom') } as const;
+  private _persist = { map: new Persist<[{ lat: number, lng: number }, number]>('persist', 'centerzoom') } as const;
   constructor(options: VisualConstructorOptions) {
     if (!options) {
       return;

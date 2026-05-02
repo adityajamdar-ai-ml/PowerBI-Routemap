@@ -1,0 +1,47 @@
+Route,Timestamp,City,Latitude,Longitude,Type
+US-CrossCountry,1,New York,40.7128,-74.0060,Domestic
+US-CrossCountry,2,Philadelphia,39.9526,-75.1652,Domestic
+US-CrossCountry,3,Pittsburgh,40.4406,-79.9959,Domestic
+US-CrossCountry,4,Columbus,39.9612,-82.9988,Domestic
+US-CrossCountry,5,Indianapolis,39.7684,-86.1581,Domestic
+US-CrossCountry,6,St. Louis,38.6270,-90.1994,Domestic
+US-CrossCountry,7,Kansas City,39.0997,-94.5786,Domestic
+US-CrossCountry,8,Denver,39.7392,-104.9903,Domestic
+US-CrossCountry,9,Salt Lake City,40.7608,-111.8910,Domestic
+US-CrossCountry,10,Las Vegas,36.1699,-115.1398,Domestic
+US-CrossCountry,11,Los Angeles,34.0522,-118.2437,Domestic
+Europe-Tour,1,London,51.5074,-0.1278,International
+Europe-Tour,2,Amsterdam,52.3676,4.9041,International
+Europe-Tour,3,Brussels,50.8503,4.3517,International
+Europe-Tour,4,Paris,48.8566,2.3522,International
+Europe-Tour,5,Lyon,45.7640,4.8357,International
+Europe-Tour,6,Marseille,43.2965,5.3698,International
+Europe-Tour,7,Barcelona,41.3851,2.1734,International
+Europe-Tour,8,Madrid,40.4168,-3.7038,International
+Europe-Tour,9,Lisbon,38.7169,-9.1399,International
+East-Asia,1,Tokyo,35.6762,139.6503,International
+East-Asia,2,Nagoya,35.1815,136.9066,International
+East-Asia,3,Osaka,34.6937,135.5023,International
+East-Asia,4,Seoul,37.5665,126.9780,International
+East-Asia,5,Beijing,39.9042,116.4074,International
+East-Asia,6,Tianjin,39.3434,117.3616,International
+East-Asia,7,Shanghai,31.2304,121.4737,International
+East-Asia,8,Hangzhou,30.2741,120.1551,International
+East-Asia,9,Shenzhen,22.5431,114.0579,International
+East-Asia,10,Hong Kong,22.3193,114.1694,International
+Australia,1,Brisbane,-27.4698,153.0251,Domestic
+Australia,2,Sydney,-33.8688,151.2093,Domestic
+Australia,3,Canberra,-35.2809,149.1300,Domestic
+Australia,4,Melbourne,-37.8136,144.9631,Domestic
+Australia,5,Adelaide,-34.9285,138.6007,Domestic
+Australia,6,Perth,-31.9505,115.8605,Domestic
+South-America,1,Bogota,4.7110,-74.0721,International
+South-America,2,Quito,-0.1807,-78.4678,International
+South-America,3,Lima,-12.0464,-77.0428,International
+South-America,4,La Paz,-16.5000,-68.1500,International
+South-America,5,Santiago,-33.4489,-70.6693,International
+South-America,6,Buenos Aires,-34.6037,-58.3816,International
+South-America,7,Montevideo,-34.9011,-56.1645,International
+South-America,8,Sao Paulo,-23.5505,-46.6333,International
+South-America,9,Rio de Janeiro,-22.9068,-43.1729,International
+South-America,10,Brasilia,-15.7942,-47.8822,International

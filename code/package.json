@@ -9,7 +9,8 @@
   "dependencies": {
     "@babel/runtime": "7.6.0",
     "@babel/runtime-corejs2": "7.6.0",
-    "@types/bingmaps": "0.0.1",
+    "@types/leaflet": "^1.9.14",
+    "leaflet": "^1.9.4",
     "@types/clone": "0.1.30",
     "@types/d3": "5.7.2",
     "clone": "2.1.2",

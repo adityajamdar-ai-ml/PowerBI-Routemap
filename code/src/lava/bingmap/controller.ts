@@ -1,11 +1,9 @@
+import * as L from 'leaflet';
 import { ILocation, IBound } from './converter';
-import { anchorPixel, bound, anchor, fitOptions, area } from './converter';
+import { bound, anchor, fitOptions, area } from './converter';
+// anchorPixel removed — pixel conversion is handled inline via L.Map.latLngToContainerPoint
 import { keys, IPoint, partial } from '../type';
 import { ISelex, selex } from '../d3';
-
-type Map = Microsoft.Maps.Map;
-type Action<T> = (a: T) => void;
-declare var __lavaBuildMap;
 
 export interface IMapElement {
   forest: boolean,
@@ -19,7 +17,7 @@ export interface IMapElement {
 }
 
 export interface IMapControl {
-  type: 'hidden' | 'aerial' | 'road' | 'grayscale' | 'canvasDark' | 'canvasLight',
+  type: 'hidden' | 'road' | 'grayscale' | 'canvasDark' | 'canvasLight',
   lang: string,
   pan: boolean,
   zoom: boolean
@@ -37,13 +35,8 @@ export function defaultZoom(width: number, height: number): number {
   return level;
 }
 
-export function pixel(map: Microsoft.Maps.Map, loc: ILocation, ref?: Microsoft.Maps.PixelReference) {
-  var x = new Microsoft.Maps.Location(loc.latitude, loc.longitude);
-  return map.tryLocationToPixel(x, ref) as IPoint;
-}
-
 export class MapFormat implements IMapFormat {
-  type = 'road' as 'aerial' | 'road' | 'grayscale' | 'canvasDark' | 'canvasLight';
+  type = 'road' as 'road' | 'grayscale' | 'canvasDark' | 'canvasLight';
   lang = 'default';
   pan = true;
   zoom = true;
@@ -85,181 +78,26 @@ export class MapFormat implements IMapFormat {
   }
 }
 
-export function coordinate(map: Microsoft.Maps.Map, pixel: IPoint) {
-  var pnt = new Microsoft.Maps.Point(pixel.x, pixel.y);
-  return map.tryPixelToLocation(pnt) as ILocation;
-}
-
-var capability = {
-  "mapControl": {
-    "displayName": "Map control",
-    "properties": {
-      "type": {
-        "displayName": "Type", "type": {
-          "enumeration": [
-            { "displayName": "Aerial", "value": "aerial" },
-            { "displayName": "Color", "value": "road" },
-            { "displayName": "Gray", "value": "grayscale" },
-            { "displayName": "Dark", "value": "canvasDark" },
-            { "displayName": "Light", "value": "canvasLight" },
-            { "displayName": "Hidden", "value": "hidden" }
-          ]
-        }
-      },
-      "lang": {
-        "displayName": "Language",
-        "description": "The language used in the map",
-        "type": {
-          "enumeration": [
-            { "displayName": "Default", "value": "default" },
-            { "displayName": "Chinese", "value": "zh-HK" },
-            { "displayName": "Czech", "value": "cs-CZ" },
-            { "displayName": "Danish", "value": "da-DK" },
-            { "displayName": "Dutch", "value": "nl-NL" },
-            { "displayName": "English", "value": "en-US" },
-            { "displayName": "Finnish", "value": "fi-FI" },
-            { "displayName": "French", "value": "fr-FR" },
-            { "displayName": "German", "value": "de-DE" },
-            { "displayName": "Italian", "value": "it-IT" },
-            { "displayName": "Japanese", "value": "ja-JP" },
-            { "displayName": "Korean", "value": "Ko-KR" },
-            { "displayName": "Norwegian(Bokmal)", "value": "nb-NO" },
-            { "displayName": "Polish", "value": "pl-PL" },
-            { "displayName": "Portuguese", "value": "pt-BR" },
-            { "displayName": "Russian", "value": "ru-RU" },
-            { "displayName": "Spanish", "value": "es-ES" },
-            { "displayName": "Swedish", "value": "sv-SE" }
-          ]
-        }
-      },
-      "pan": { "displayName": "Pan", "type": { "bool": true } },
-      "zoom": { "displayName": "Zoom", "type": { "bool": true } },
-      "autofit": {
-        "displayName": "Auto fit",
-        "description": "Fit all data in the view when data changed",
-        "type": { "bool": true }
-      }
-    }
-  },
-  "mapElement": {
-    "displayName": "Map element",
-    "properties": {
-      "forest": { "displayName": "Forest", "type": { "bool": true } },
-      "road": {
-        "displayName": "Road", "type": {
-          "enumeration": [
-            { "displayName": "Default", "value": "color" },
-            { "displayName": "Gray w/ label", "value": "gray_label" },
-            { "displayName": "Gray w/o label", "value": "gray" },
-            { "displayName": "Hidden", "value": "hidden" }
-          ]
-        }
-      },
-      "label": { "displayName": "Label", "type": { "bool": true } },
-      "city": { "displayName": "City", "type": { "bool": true } },
-      "icon": { "displayName": "Icon", "type": { "bool": true } },
-      "building": { "displayName": "Building", "type": { "bool": true } },
-      "area": { "displayName": "Area", "type": { "bool": true } },
-      "scale": { "displayName": "Scale bar", "type": { "bool": true } }
-    }
+function tileUrl(type: IMapFormat['type']): string | null {
+  switch (type) {
+    case 'road':        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    case 'grayscale':   return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    case 'canvasDark':  return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    case 'canvasLight': return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    case 'hidden':      return null;
+    default:            return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   }
 }
 
-function parameter(map: Map, fmt: IMapFormat, div: HTMLDivElement): Microsoft.Maps.IMapLoadOptions {
-  const para = {
-    credentials: 'Your key here',
-    showDashboard: false,
-    showTermsLink: false,
-    showScalebar: fmt.scale || false,
-    showLogo: false,
-    customMapStyle: customStyle(fmt),
-    disablePanning: !fmt.pan,
-    disableZooming: !fmt.zoom,
-    mapTypeId: mapType(fmt)
-  } as Microsoft.Maps.IMapLoadOptions;
-
-  if (map) {
-    para.center = map.getCenter();
-    para.zoom = map.getZoom()
+function tileAttribution(type: IMapFormat['type']): string {
+  switch (type) {
+    case 'grayscale':
+    case 'canvasLight':
+    case 'canvasDark':
+      return '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>';
+    default:
+      return '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   }
-  return para;
-}
-
-function mapType(v: IMapFormat) {
-  switch (v.type) {
-    case 'aerial': return Microsoft.Maps.MapTypeId.aerial;
-    case 'road': return Microsoft.Maps.MapTypeId.road;
-    case 'canvasDark': return Microsoft.Maps.MapTypeId.canvasDark;
-    case 'canvasLight': return Microsoft.Maps.MapTypeId.canvasLight;
-    case 'grayscale': return Microsoft.Maps.MapTypeId.grayscale;
-  }
-}
-
-function customStyle(v: IMapFormat): Microsoft.Maps.ICustomMapStyle {
-  const nothing = { labelVisible: false, visible: false, borderVisible: false };
-  const visible = { visible: true, labelVisible: v.label };
-  const version = '1.*';
-
-  if (v.type === 'aerial') {
-    return null;
-  }
-
-  if (v.type === 'hidden') {
-    return {
-      version,
-      elements: {
-        area: nothing,
-        point: nothing,
-        political: nothing,
-        structure: nothing,
-        transportation: nothing,
-        water: nothing
-      },
-      settings: {
-        landColor: "#FFFFFF",
-        shadedReliefVisible: false
-      }
-    } as Microsoft.Maps.ICustomMapStyle;
-  }
-
-  const elements = {
-    highSpeedRamp: nothing,
-    ramp: nothing,
-    unpavedStreet: nothing,
-    tollRoad: nothing,
-    trail: nothing
-  } as Microsoft.Maps.ICustomMapStyle['elements'];  
-  
-  elements.mapElement = elements.political = { labelVisible: v.label };
-
-  if (v.road === 'gray' || v.road === 'gray_label') {
-    elements.transportation = {
-      visible: true,
-      labelVisible: v.road === 'gray_label',
-      fillColor: '#DDDDDD',
-      strokeColor: '#AAAAAA',
-      labelOutlineColor: '#EEEEEE'
-    } as Microsoft.Maps.IMapElementStyle;
-    elements.street = {
-      visible: true,
-      labelVisible: v.road === 'gray_label',
-      fillColor: "#EEEEEE",
-      strokeColor: "#DDDDDD",
-      labelOutlineColor: '#DDDDDD'
-    } as Microsoft.Maps.IMapElementStyle;
-  }
-  else if (v.road === 'hidden') {
-    elements.transportation = nothing;
-  }
-
-  if (!v.building) {
-    elements.structure = elements.building = { visible: false };
-  }
-  elements.point = v.icon ? visible : nothing;
-  elements.vegetation = v.forest ? visible : nothing;
-  elements.populatedPlace = { labelVisible: v.city, visible: v.icon };
-  elements.area = v.area ? visible : nothing;
-  return { version, elements };
 }
 
 export interface IListener {
@@ -269,62 +107,52 @@ export interface IListener {
 
 export class Controller {
   private _div: HTMLDivElement;
-  private _map: Map;
+  private _map: L.Map;
+  private _tileLayer: L.TileLayer | null = null;
+  private _scaleControl: L.Control.Scale | null = null;
   private _fmt: IMapFormat;
   private _svg: ISelex;
   private _svgroot: ISelex;
+  private _canvas: ISelex;
 
   public get map() { return this._map; }
-
   public get format() { return this._fmt; }
-
   public get svg() { return this._svgroot; }
-
-  private _canvas: ISelex;
   public get canvas() { return this._canvas; }
 
   public location(p: IPoint): ILocation {
-    let pnt = new Microsoft.Maps.Point(p.x, p.y);
-    return this._map.tryPixelToLocation(pnt) as ILocation;
+    const size = this._map.getSize();
+    const latlng = this._map.containerPointToLatLng(L.point(p.x + size.x / 2, p.y + size.y / 2));
+    return { latitude: latlng.lat, longitude: latlng.lng };
   }
-  
-  public setCenterZoom(center: Microsoft.Maps.Location, zoom: number) {
+
+  public setCenterZoom(center: { lat: number, lng: number } | ILocation, zoom: number) {
     if (this._map) {
-      const { min, max } = this._map.getZoomRange();
-      zoom = Math.min(max, 20, Math.max(min, 1, zoom));
-      this._map.setView({ center, zoom });
+      zoom = Math.min(20, Math.max(1, zoom));
+      const lat = 'lat' in center ? center.lat : (center as ILocation).latitude;
+      const lng = 'lng' in center ? center.lng : (center as ILocation).longitude;
+      this._map.setView([lat, lng], zoom, { animate: false });
     }
   }
 
-  public pixel(loc: ILocation | IBound, ref?: Microsoft.Maps.PixelReference): IPoint {
-    if ((loc as IBound).anchor) {
-      return anchorPixel(this._map, loc as any);
-    }
-    else {
-      return pixel(this._map, loc as any, ref);
-    }
+  public pixel(loc: ILocation | IBound): IPoint {
+    const anchor = (loc as IBound).anchor ? (loc as IBound).anchor : loc as ILocation;
+    const size = this._map.getSize();
+    const p = this._map.latLngToContainerPoint(L.latLng(anchor.latitude, anchor.longitude));
+    return { x: p.x - size.x / 2, y: p.y - size.y / 2 };
   }
 
   public anchor(locs: ILocation[]) { return anchor(locs); }
-
   public area(locs: ILocation[], level = 20) { return area(locs, level); }
-
   public bound(locs: ILocation[]): IBound { return bound(locs); }
 
-  private _listener = [] as IListener[];
+  private _listener: IListener[] = [];
   public add(v: IListener) { this._listener.push(v); return this; }
 
   public fitView(areas: IBound[], backupCenter?: ILocation) {
-    const width = this._map.getWidth(), height = this._map.getHeight();
-    const config = fitOptions(areas, { width, height });
-    const minZoom = this._map.getZoomRange().min;
-    if (config.zoom < minZoom) {
-      config.zoom = minZoom;
-      if (backupCenter) {
-        config.center = new Microsoft.Maps.Location(backupCenter.latitude, backupCenter.longitude);
-      }
-    }
-    this._map.setView(config);
+    const size = this._map.getSize();
+    const config = fitOptions(areas, { width: size.x, height: size.y });
+    this._map.setView([config.center.latitude, config.center.longitude], config.zoom, { animate: false });
     this._viewChange(false);
   }
 
@@ -332,7 +160,7 @@ export class Controller {
     const div = selex(id).node<HTMLDivElement>();
     this._fmt = {} as IMapFormat;
     this._div = div;
-    let config = (root: ISelex) => {
+    const applyStyle = (root: ISelex) => {
       root.att.tabIndex(-1)
         .sty.pointer_events('none')
         .sty.position('absolute')
@@ -340,47 +168,58 @@ export class Controller {
         .sty.user_select('none');
       return root;
     };
-    this._canvas = config(selex(div).append('canvas'));
-    this._svg = config(selex(div).append('svg'));
+    this._canvas = applyStyle(selex(div).append('canvas'));
+    this._svg = applyStyle(selex(div).append('svg'));
     this._svgroot = this._svg.append('g').att.id('root');
-    __lavaBuildMap = () => {
-      this._remap();
-      this._then && this._then(this._map);
-      this._then = null;
+  }
+
+  private _applyTileLayer() {
+    if (this._tileLayer) {
+      this._map.removeLayer(this._tileLayer);
+      this._tileLayer = null;
+    }
+    const url = tileUrl(this._fmt.type);
+    if (url) {
+      this._tileLayer = L.tileLayer(url, {
+        attribution: tileAttribution(this._fmt.type),
+        subdomains: 'abcd',
+        maxZoom: 19
+      });
+      this._tileLayer.addTo(this._map);
+    }
+    if (this._scaleControl) {
+      this._scaleControl.remove();
+      this._scaleControl = null;
+    }
+    if (this._fmt.scale) {
+      this._scaleControl = L.control.scale({ position: 'bottomleft' });
+      this._scaleControl.addTo(this._map);
     }
   }
 
-  private _remap(): Map {
-    var setting = parameter(this._map, this._fmt, this._div);
-    selex(this._div).select('div').remove();
-    let map = new Microsoft.Maps.Map(this._div, setting);
-    let Events = Microsoft.Maps.Events;
-    if (this._map && this._handler1) {
-      Events.removeHandler(this._handler1);
-      Events.removeHandler(this._handler2);
-      Events.removeHandler(this._handler3);
+  private _applyInteraction() {
+    if (!this._map) { return; }
+    if (this._fmt.pan) {
+      this._map.dragging.enable();
+    } else {
+      this._map.dragging.disable();
     }
-    this._canvas && map.getRootElement().appendChild(this._canvas.node());
-    this._svg && map.getRootElement().appendChild(this._svg.node());
-    if (!this._map) {//only for the first time, call resize
-      this._map = map;
-      this._resize();
+    if (this._fmt.zoom) {
+      this._map.scrollWheelZoom.enable();
+      this._map.doubleClickZoom.enable();
+      this._map.touchZoom && this._map.touchZoom.enable();
+      this._map.boxZoom && this._map.boxZoom.enable();
+    } else {
+      this._map.scrollWheelZoom.disable();
+      this._map.doubleClickZoom.disable();
+      this._map.touchZoom && this._map.touchZoom.disable();
+      this._map.boxZoom && this._map.boxZoom.disable();
     }
-    else {
-      this._map = map;
-    }
-    this._handler1 = Events.addHandler(map, 'viewchange', () => this._viewChange(false));
-    this._handler2 = Events.addHandler(map, 'viewchangeend', () => this._viewChange(true));
-    this._handler3 = Events.addHandler(map, 'mapresize', () => this._resize());
-    return map;
   }
-  private _handler1: Microsoft.Maps.IHandlerId;
-  private _handler2: Microsoft.Maps.IHandlerId;
-  private _handler3: Microsoft.Maps.IHandlerId;
 
   private _viewChange(end = false) {
-    let zoom = this._map.getZoom();
-    for (let l of this._listener) {
+    const zoom = this._map.getZoom();
+    for (const l of this._listener) {
       l.transform && l.transform(this, this._zoom, end);
     }
     this._zoom = zoom;
@@ -389,92 +228,63 @@ export class Controller {
   private _zoom: number;
 
   private _resize(): void {
-    if (!this._map) {
-      return;
-    }
-    let w = this._map.getWidth(), h = this._map.getHeight();
+    if (!this._map) { return; }
+    const size = this._map.getSize();
+    const w = size.x, h = size.y;
     this._svg.att.width('100%').att.height('100%');
-    // this._svg.att.size(w, h);
     this._canvas && this._canvas.att.size(w, h);
     this._svgroot.att.translate(w / 2, h / 2);
-    for (let l of this._listener) {
+    for (const l of this._listener) {
       l.resize && l.resize(this);
     }
   }
 
-  private _then: Action<Map>;
-  restyle(fmt: Partial<IMapFormat>, then?: Action<Map>): Controller {
-    clearCopyright();
+  restyle(fmt: Partial<IMapFormat>, then?: (map: any) => void): Controller {
     then = then || (() => { });
-    var dirty = {} as Partial<IMapFormat>;
-    for (var k in fmt) {
+    const dirty = {} as Partial<IMapFormat>;
+    for (const k in fmt) {
       if (fmt[k] !== this._fmt[k]) {
         dirty[k] = this._fmt[k] = fmt[k];
       }
     }
-    if (keys(dirty).length === 0 && this._map) {
+
+    if (!this._map) {
+      const initZoom = defaultZoom(this._div.clientWidth || 400, this._div.clientHeight || 300);
+      this._map = L.map(this._div, {
+        center: [0, 0],
+        zoom: initZoom,
+        zoomControl: false,
+        attributionControl: true,
+      });
+      // Move SVG/canvas on top of Leaflet's internal panes
+      this._div.appendChild(this._canvas.node());
+      this._div.appendChild(this._svg.node());
+      selex(this._svg.node()).sty.z_index('800').sty.width('100%').sty.height('100%');
+      this._map.on('move', () => this._viewChange(false));
+      this._map.on('moveend', () => this._viewChange(true));
+      this._map.on('resize', () => this._resize());
+      this._applyTileLayer();
+      this._applyInteraction();
+      this._resize();
+      then(this._map);
       return this;
     }
-    if ('lang' in dirty || !this._map) {
-      selex('#mapscript').remove();
-      selex('head').selectAll('link').filter(function () {
-        var src = selex(this).att.href();
-        return src && src.indexOf('www.bing.com') > 0;
-      }).remove();
-      selex('head').selectAll('script').filter(function () {
-        var src = selex(this).att.href();
-        return src && src.indexOf('www.bing.com') > 0;
-      }).remove();
 
-      let script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.id = 'mapscript';
-      script.src = "https://www.bing.com/api/maps/mapcontrol?callback=__lavaBuildMap";
-      if (dirty.lang !== 'default') {
-        script.src += "&setLang=" + dirty.lang;
-      }
-      script.async = true;
-      script.defer = true;
-      this._then = then;
-      document.body.appendChild(script);
+    if (keys(dirty).length === 0) {
+      then(null);
       return this;
     }
-    const remap = { type: 1, label: 1, forest: 1, road: 1, city: 1, icon: 1, area: 1, building: 1 };
-    for (var k in dirty) {
-      if (k in remap) {
-        setTimeout(() => then(this._remap()), 0);
-        return this;
-      }
-    }
-    var options = {} as Microsoft.Maps.IMapOptions;
 
-    if ('pan' in dirty) {
-      options.disablePanning = !dirty.pan;
+    const tileKeys = { type: 1, scale: 1 };
+    const interactionKeys = { pan: 1, zoom: 1 };
+    let needTile = false, needInteraction = false;
+    for (const k in dirty) {
+      if (k in tileKeys) { needTile = true; }
+      if (k in interactionKeys) { needInteraction = true; }
     }
-    if ('zoom' in dirty) {
-      options.disableZooming = !dirty.zoom;
-    }
-    if (Object.keys(options).length) {
-      setTimeout(() => this._map.setOptions(options), 0);
-    }
+    if (needTile) { this._applyTileLayer(); }
+    if (needInteraction) { this._applyInteraction(); }
     then(null);
     return this;
   }
-}
-
-let clearCounter = 1;
-function clearCopyright() {
-  clearCounter += 1;
-  if (clearCounter % 10 === 0) {
-    return;
-  }
-  setTimeout(() => {
-    const sel = selex('.CopyrightControl');
-    if (sel.size() === 0) {
-      clearCopyright();
-    }
-    else {
-      sel.sty.display('none');
-    }
-  }, 200);
 }

@@ -92,12 +92,12 @@ export function bound(data: ILocation[]): IBound {
     }
 }
 
-export function fitOptions(bounds: IBound[], view: ISize): Microsoft.Maps.IViewOptions {
+export function fitOptions(bounds: IBound[], view: ISize): { center: ILocation, zoom: number } {
     bounds = (bounds || []).filter(a => !!a);
     if (bounds.length === 0) {
         return {
             zoom: defaultZoom(view.width, view.height),
-            center: new Microsoft.Maps.Location(0, 0)
+            center: { latitude: 0, longitude: 0 }
         };
     }
     let n = Math.max(...bounds.map(a => a.anchor.latitude + a.margin.north));
@@ -106,51 +106,18 @@ export function fitOptions(bounds: IBound[], view: ISize): Microsoft.Maps.IViewO
     let e = Math.max(...bounds.map(a => a.anchor.longitude + a.margin.east));
     s = clamp(s, -88, 88);
     n = clamp(n, -88, 88);
-    let rect = Microsoft.Maps.LocationRect.fromCorners(
-        new Microsoft.Maps.Location(n, w),
-        new Microsoft.Maps.Location(s, e)
-    );
+    const center: ILocation = { latitude: (n + s) / 2, longitude: (e + w) / 2 };
     let height = Math.abs(helper.lat2y(n, 20) - helper.lat2y(s, 20));
-    let width = helper.lon2x(rect.width - 180, 20);
+    // lon2x(span - 180, level) gives the pixel width of `span` degrees at that level
+    let width = helper.lon2x(e - w - 180, 20);
     for (var level = 20; level > 1; level--) {
         if (width < view.width && height < view.height) {
             break;
         }
         width /= 2;
         height /= 2;
-  }
-  return { zoom: level, center: rect.center };
-}
-
-export function anchorPixel(m: Microsoft.Maps.Map, bound: IBound): IPoint {
-    let level = m.getZoom(), { anchor, margin } = bound;
-    let loc = new Microsoft.Maps.Location(anchor.latitude, anchor.longitude);
-    let pix = m.tryLocationToPixel(loc) as IPoint;
-    let east = helper.lon2x(margin.east - 180, level);
-    let west = helper.lon2x(margin.west - 180, level);
-    let width = m.getWidth();
-    let left = pix.x + width / 2 - west;
-    let size = helper.mapSize(level);
-    let half = east / 2 + west / 2;
-    if (left < 0) {
-        if (width - left - size > half) {
-            pix.x += size;
-            return pix;
-        }
-        return pix;
     }
-    if (left > width - half) {
-        if (left + half - size > 0) {
-            pix.x -= size;
-            return pix;
-        }
-        if (left > width) {
-            pix.x -= size;
-            return pix;
-        }
-        return pix;
-    }
-    return pix;
+    return { zoom: level, center };
 }
 
 //allow to have null or undefined in data
